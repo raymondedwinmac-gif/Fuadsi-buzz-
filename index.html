@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Fuadsi Buzz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+.authwrap{max-width:380px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:24px;}
+.authwrap .logo{font-size:22px;margin-bottom:4px;}
+.authwrap p.sub{color:var(--muted);font-size:13px;margin:0 0 22px;}
+.authtabs{display:flex;gap:6px;margin-bottom:16px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:4px;}
+.authtabs button{flex:1;border:none;background:none;padding:8px;border-radius:7px;font-weight:700;font-size:12.5px;color:var(--muted);cursor:pointer;}
+.authtabs button.active{background:var(--green);color:#fff;}
+.authmsg{font-size:12px;color:var(--danger);margin:-4px 0 10px;min-height:14px;}
+#loadingScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;color:var(--muted);font-size:13px;}
+:root{
+  --green:#0F8A4B;
+  --green-dark:#0B6B3A;
+  --green-light:#E7F6ED;
+  --white:#FFFFFF;
+  --bg:#F5F8F6;
+  --ink:#12241B;
+  --muted:#6E7C74;
+  --line:#E4ECE7;
+  --danger:#E24B4A;
+  --radius:16px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{margin:0;font-family:'Manrope',sans-serif;background:var(--bg);color:var(--ink);}
+button,input,select,textarea{font-family:inherit;}
+.app{max-width:480px;margin:0 auto;background:var(--bg);min-height:100vh;position:relative;padding-bottom:76px;}
+
+/* HEADER */
+.topbar{
+  position:sticky;top:0;z-index:20;
+  background:var(--white);
+  border-bottom:1px solid var(--line);
+  padding:14px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.logo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:17px;}
+.logo .dot{width:9px;height:9px;border-radius:50%;background:var(--green);}
+.topbar-actions{display:flex;gap:8px;align-items:center;}
+.icon-btn{
+  width:36px;height:36px;border-radius:50%;
+  background:var(--green-light);border:none;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+}
+.icon-btn svg{width:18px;height:18px;stroke:var(--green-dark);}
+.role-pill{
+  font-size:11px;font-weight:700;color:var(--green-dark);
+  background:var(--green-light);padding:5px 10px;border-radius:20px;
+  border:none;cursor:pointer;
+}
+
+/* TAB PANELS */
+.panel{display:none;padding:16px;animation:fadeIn .18s ease;}
+.panel.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+.panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.panel-head h1{font-size:19px;margin:0;font-weight:800;}
+.fab{
+  background:var(--green);color:#fff;border:none;
+  width:38px;height:38px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  font-size:20px;line-height:1;flex-shrink:0;
+}
+
+/* EMPTY STATE */
+.empty{
+  text-align:center;padding:52px 20px;color:var(--muted);
+}
+.empty .e-icon{
+  width:56px;height:56px;border-radius:50%;
+  background:var(--green-light);display:flex;align-items:center;justify-content:center;
+  margin:0 auto 14px;
+}
+.empty .e-icon svg{width:26px;height:26px;stroke:var(--green-dark);}
+.empty p{font-size:13.5px;margin:0;line-height:1.5;}
+.empty .e-title{font-weight:700;color:var(--ink);font-size:14.5px;margin-bottom:4px;}
+
+/* CARDS */
+.card-list{display:flex;flex-direction:column;gap:10px;}
+.card{
+  background:var(--white);border:1px solid var(--line);border-radius:var(--radius);
+  padding:13px 14px;cursor:pointer;transition:transform .12s ease, box-shadow .12s ease;
+}
+.card:active{transform:scale(0.98);}
+.card-row{display:flex;gap:10px;}
+.card-thumb{
+  width:52px;height:52px;border-radius:10px;background:var(--green-light);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px;
+}
+.card-body{flex:1;min-width:0;}
+.card-title{font-size:14px;font-weight:700;margin:0 0 3px;line-height:1.3;}
+.card-snippet{font-size:12.5px;color:var(--muted);margin:0 0 6px;line-height:1.45;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.card-meta{font-size:11px;color:var(--muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.chip{
+  font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;
+  background:var(--green-light);color:var(--green-dark);
+}
+.chip.price{background:#FFF4DE;color:#8A6116;}
+.stat-row{display:flex;gap:12px;margin-top:8px;font-size:11px;color:var(--muted);}
+.stat-row span{display:flex;align-items:center;gap:4px;}
+.stat-row svg{width:13px;height:13px;}
+
+/* FILTERS */
+.filter-row{display:flex;gap:8px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px;}
+.filter-row select{
+  border:1px solid var(--line);background:var(--white);border-radius:10px;
+  padding:8px 10px;font-size:12px;color:var(--ink);flex:1 0 auto;min-width:120px;
+}
+
+/* MODAL / DETAIL */
+.overlay{
+  position:fixed;inset:0;background:rgba(15,30,20,0.45);z-index:100;
+  display:none;align-items:flex-end;justify-content:center;
+}
+.overlay.active{display:flex;}
+.sheet{
+  background:var(--bg);width:100%;max-width:480px;max-height:92vh;overflow-y:auto;
+  border-radius:20px 20px 0 0;padding:16px;position:relative;animation:slideUp .2s ease;
+}
+@keyframes slideUp{from{transform:translateY(24px);opacity:0;}to{transform:none;opacity:1;}}
+.sheet-close{
+  position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:50%;
+  background:var(--white);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;z-index:2;
+}
+.sheet-close svg{width:15px;height:15px;}
+.detail-thumb{
+  width:100%;height:150px;border-radius:14px;background:var(--green-light);
+  display:flex;align-items:center;justify-content:center;font-size:40px;margin-bottom:14px;
+}
+.detail-title{font-size:19px;font-weight:800;margin:0 0 8px;padding-right:32px;}
+.detail-meta{font-size:12px;color:var(--muted);margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap;}
+.detail-body{font-size:14px;line-height:1.65;color:#2C3B31;white-space:pre-wrap;margin-bottom:16px;}
+.detail-actions{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.btn{
+  border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;
+}
+.btn-primary{background:var(--green);color:#fff;}
+.btn-ghost{background:var(--white);color:var(--ink);border:1px solid var(--line);}
+.btn-danger{background:#FDEDED;color:var(--danger);}
+.btn-block{width:100%;}
+.divider{border:none;border-top:1px solid var(--line);margin:14px 0;}
+
+/* FORM */
+.field{margin-bottom:12px;}
+.field label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px;}
+.field input,.field textarea,.field select{
+  width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 11px;
+  font-size:13.5px;background:var(--white);color:var(--ink);
+}
+.field textarea{min-height:90px;resize:vertical;}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;
+  background:var(--white);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;}
+.toggle-row span{font-size:13px;font-weight:600;}
+.switch{width:38px;height:22px;background:var(--line);border-radius:20px;position:relative;cursor:pointer;flex-shrink:0;border:none;}
+.switch::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .15s;}
+.switch.on{background:var(--green);}
+.switch.on::after{transform:translateX(16px);}
+.upload-box{
+  border:1.5px dashed var(--line);border-radius:10px;padding:16px;text-align:center;
+  color:var(--muted);font-size:12px;cursor:pointer;background:var(--white);
+}
+.upload-box svg{width:20px;height:20px;stroke:var(--muted);margin-bottom:6px;}
+
+/* COMMENTS / REVIEWS */
+.comment{padding:10px 0;border-bottom:1px solid var(--line);}
+.comment:last-child{border-bottom:none;}
+.comment-head{display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;}
+.comment-head strong{font-weight:700;}
+.comment-head span{color:var(--muted);}
+.comment p{margin:0;font-size:13px;color:#2C3B31;line-height:1.5;}
+.stars{color:#F2B705;font-size:13px;}
+
+/* BOTTOM NAV */
+.bottomnav{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:480px;background:var(--white);border-top:1px solid var(--line);
+  display:flex;justify-content:space-around;padding:8px 4px 10px;z-index:30;
+}
+.nav-btn{
+  background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;
+  color:var(--muted);font-size:10px;font-weight:700;cursor:pointer;flex:1;padding:4px 0;
+}
+.nav-btn svg{width:21px;height:21px;stroke:var(--muted);}
+.nav-btn.active{color:var(--green-dark);}
+.nav-btn.active svg{stroke:var(--green-dark);}
+
+/* MORE GRID */
+.more-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+.more-item{
+  background:var(--white);border:1px solid var(--line);border-radius:14px;
+  padding:16px 8px;text-align:center;cursor:pointer;
+}
+.more-item .mi-icon{
+  width:40px;height:40px;border-radius:50%;background:var(--green-light);
+  display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:18px;
+}
+.more-item span{font-size:11.5px;font-weight:700;}
+
+/* ABOUT */
+.about-hero{background:var(--green);color:#fff;border-radius:18px;padding:22px 18px;margin-bottom:16px;}
+.about-hero h1{font-size:19px;margin:0 0 8px;line-height:1.35;}
+.about-hero p{font-size:12.5px;line-height:1.6;opacity:0.92;margin:0;}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
+.stat-card{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:12px;}
+.stat-card b{display:block;font-size:14px;color:var(--green-dark);}
+.stat-card span{font-size:11px;color:var(--muted);}
+.about-block{margin-bottom:18px;}
+.about-block h2{font-size:14.5px;margin:0 0 6px;}
+.about-block p{font-size:13px;color:#2C3B31;line-height:1.6;margin:0;}
+.values-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.value-card{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:12px;}
+.value-card b{display:block;font-size:12.5px;margin-bottom:3px;}
+.value-card span{font-size:11px;color:var(--muted);line-height:1.4;}
+.about-footer{font-size:11px;color:var(--muted);line-height:1.6;padding:16px 4px 8px;border-top:1px solid var(--line);margin-top:6px;}
+
+/* QUIZ */
+.quiz-timer{
+  background:var(--white);border:1px solid var(--line);border-radius:12px;padding:10px 14px;
+  display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;font-size:13px;font-weight:700;
+}
+.q-option{
+  background:var(--white);border:1.5px solid var(--line);border-radius:10px;padding:11px 13px;
+  margin-bottom:8px;font-size:13.5px;cursor:pointer;
+}
+.q-option.selected{border-color:var(--green);background:var(--green-light);font-weight:700;}
+.toast{
+  position:fixed;bottom:88px;left:50%;transform:translateX(-50%);
+  background:var(--ink);color:#fff;padding:10px 18px;border-radius:30px;font-size:12.5px;
+  z-index:200;opacity:0;pointer-events:none;transition:opacity .2s;
+}
+.toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<div id="loadingScreen">Loading Fuadsi Buzz…</div>
+
+<div class="authwrap" id="authScreen" style="display:none;">
+  <div class="logo">🌿 <strong>Fuadsi Buzz</strong></div>
+  <p class="sub">The unofficial FUADSI student companion. Sign in with your account to continue.</p>
+  <div class="authtabs">
+    <button id="tabSignIn" class="active" onclick="setAuthMode('signin')">Sign in</button>
+    <button id="tabSignUp" onclick="setAuthMode('signup')">Sign up</button>
+  </div>
+  <div class="field" id="nameField" style="display:none;"><label>Full name</label><input id="auth-name" placeholder="Your name"></div>
+  <div class="field"><label>Email</label><input id="auth-email" type="email" placeholder="you@example.com"></div>
+  <div class="field"><label>Password</label><input id="auth-password" type="password" placeholder="••••••••"></div>
+  <div class="authmsg" id="authMsg"></div>
+  <button class="btn btn-primary btn-block" id="authSubmit" onclick="submitAuth()">Sign in</button>
+</div>
+
+<div class="app" id="app" style="display:none;">
+
+  <div class="topbar">
+    <div class="logo"><span class="dot"></span>Fuadsi Buzz</div>
+    <div class="topbar-actions">
+      <button class="role-pill" id="roleSwitcher" onclick="cycleRole()">Student</button>
+    </div>
+  </div>
+
+  <div id="panels"></div>
+
+  <div class="bottomnav" id="bottomnav"></div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="sheet" id="sheet"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+
+/* ================= SUPABASE ================= */
+const SUPABASE_URL = "https://ayfcjipuvidqytukxfkv.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_OGg11FgKOzKeF_HPLuL-TQ_Yy5pWvl8";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let session = null;
+let profile = null;
+let authMode = "signin";
+
+const FACULTIES = {}; // filled from DB: name -> [dept names]
+let FACULTY_ROWS = [], DEPT_ROWS = [];
+const LEVELS = ["100","200","300","400","500"];
+const SEMESTERS = ["First Semester","Second Semester"];
+
+function esc(s){ return (s||"").replace(/</g,"&lt;"); }
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 1800);
+}
+function timeAgo(iso){
+  if(!iso) return "";
+  const s = Math.floor((Date.now()-new Date(iso).getTime())/1000);
+  if(s<60) return "just now";
+  if(s<3600) return Math.floor(s/60)+"m ago";
+  if(s<86400) return Math.floor(s/3600)+"h ago";
+  return Math.floor(s/86400)+"d ago";
+}
+
+/* ================= AUTH ================= */
+function setAuthMode(mode){
+  authMode = mode;
+  document.getElementById('tabSignIn').classList.toggle('active', mode==='signin');
+  document.getElementById('tabSignUp').classList.toggle('active', mode==='signup');
+  document.getElementById('nameField').style.display = mode==='signup' ? 'block' : 'none';
+  document.getElementById('authSubmit').textContent = mode==='signin' ? 'Sign in' : 'Create account';
+  document.getElementById('authMsg').textContent = '';
+}
+async function submitAuth(){
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const msgEl = document.getElementById('authMsg');
+  msgEl.textContent = '';
+  if(!email || !password){ msgEl.textContent = 'Enter email and password.'; return; }
+  if(authMode === 'signup'){
+    const name = document.getElementById('auth-name').value.trim();
+    const { error } = await sb.auth.signUp({ email, password, options: { data: { full_name: name } } });
+    if(error){ msgEl.textContent = error.message; return; }
+    toast("Account created — signing you in");
+  } else {
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if(error){ msgEl.textContent = error.message; return; }
+  }
+  await initSession();
+}
+async function signOut(){
+  await sb.auth.signOut();
+  session = null; profile = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('authScreen').style.display = 'flex';
+}
+async function initSession(){
+  const { data:{ session: s } } = await sb.auth.getSession();
+  session = s;
+  if(!session){
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('authScreen').style.display = 'flex';
+    return;
+  }
+  const { data: p } = await sb.from('profiles').select('*').eq('id', session.user.id).single();
+  profile = p;
+  document.getElementById('loadingScreen').style.display = 'none';
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('roleSwitcher').textContent = roleLabel(profile.role);
+  await loadFaculties();
+  renderNav();
+  renderPanels();
+}
+function roleLabel(r){
+  return {student:"Student",content_admin:"Content Admin",timetable_admin:"Timetable Admin",
+    community_moderator:"Community Moderator",super_admin:"Super Admin"}[r] || "Student";
+}
+function canManage(adminRole){
+  return profile && (profile.role === 'super_admin' || profile.role === adminRole);
+}
+function myId(){ return session?.user?.id; }
+
+async function loadFaculties(){
+  const { data: facs } = await sb.from('faculties').select('id,name').order('id');
+  const { data: depts } = await sb.from('departments').select('id,faculty_id,name').order('id');
+  FACULTY_ROWS = facs || []; DEPT_ROWS = depts || [];
+  facs?.forEach(f => FACULTIES[f.name] = depts.filter(d=>d.faculty_id===f.id).map(d=>d.name));
+}
+
+/* ================= ICONS / TABS (unchanged UI config) ================= */
+const ICONS = {
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>',
+  notes:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l5 5v13H6z"/><path d="M14 3v6h6"/></svg>',
+  gist:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4A8.5 8.5 0 1 1 21 11.5z"/></svg>',
+  market:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18l-1.5 12h-15z"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/></svg>',
+  more:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>',
+  close:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  upload:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>',
+  heart:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M19 14c1.5-1.5 3-3.5 3-6a4.5 4.5 0 0 0-8-2.8A4.5 4.5 0 0 0 6 8c0 2.5 1.5 4.5 3 6l5 5z"/></svg>',
+  msg:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4A8.5 8.5 0 1 1 21 11.5z"/></svg>'
+};
+
+const TABS = [
+  {key:"updates", table:"updates", label:"Home", icon:"home", type:"feed", nav:true, title:"School Updates",
+   emptyMsg:"No updates yet — announcements from the school will show up here.", admin:"content_admin", thumb:"📢"},
+  {key:"notes", label:"Notes", icon:"notes", type:"notes", nav:true, title:"Notes", admin:"content_admin", thumb:"📘"},
+  {key:"gist", table:"hot_gist", label:"Hot Gist", icon:"gist", type:"feed", nav:true, title:"Hot Gist",
+   emptyMsg:"No gist yet — be the first to drop something.", admin:"community_moderator", anonymous:true, thumb:"🔥", studentPost:true},
+  {key:"marketplace", table:"marketplace_items", label:"Market", icon:"market", type:"listing", nav:true, title:"Student Marketplace",
+   emptyMsg:"No items listed yet.", admin:"community_moderator", thumb:"🛍️", priceLabel:"Price"},
+  {key:"more", label:"More", icon:"more", type:"more", nav:true, title:"More"},
+
+  {key:"sports", table:"sports_posts", label:"Sports", icon:"home", type:"feed", nav:false, title:"Sports",
+   emptyMsg:"No sports news yet.", admin:"content_admin", thumb:"⚽"},
+  {key:"cbt", label:"Practice", icon:"notes", type:"cbt", nav:false, title:"Practice Questions (CBT)", admin:"content_admin", thumb:"📝"},
+  {key:"timetable", label:"Timetable", icon:"home", type:"timetable", nav:false, title:"Timetable", admin:"timetable_admin"},
+  {key:"trends", table:"campus_trends", label:"Trends", icon:"gist", type:"feed", nav:false, title:"Campus Trends",
+   emptyMsg:"No trends yet.", admin:"community_moderator", thumb:"📈", studentPost:true},
+  {key:"hostel", table:"hostel_listings", label:"Hostel", icon:"market", type:"listing", nav:false, title:"Hostel Allocation",
+   emptyMsg:"No hostel listings yet.", admin:"community_moderator", thumb:"🏠", priceLabel:"Price / session"},
+  {key:"spotlight", label:"Spotlight", icon:"gist", type:"spotlight", nav:false, title:"Spotlight — Face of the Week"},
+  {key:"feedback", label:"Feedback", icon:"notes", type:"feedback", nav:false, title:"Feedback & Ratings"},
+  {key:"about", label:"About", icon:"home", type:"about", nav:false, title:"About FUADSI"}
+];
+
+function renderNav(){
+  document.getElementById('bottomnav').innerHTML = TABS.filter(t=>t.nav).map(t=>`
+    <button class="nav-btn ${activeTab===t.key?'active':''}" onclick="goTab('${t.key}')">${ICONS[t.icon]}<span>${t.label}</span></button>`).join('');
+}
+let activeTab = "updates";
+function goTab(key){ activeTab = key; renderNav(); renderPanels(); window.scrollTo({top:0}); }
+function openSheet(html){
+  document.getElementById('sheet').innerHTML = `<button class="sheet-close" onclick="closeSheet()">${ICONS.close}</button>` + html;
+  document.getElementById('overlay').classList.add('active');
+}
+function closeSheet(){ document.getElementById('overlay').classList.remove('active'); }
+
+/* ================= STORAGE UPLOAD HELPER ================= */
+async function uploadFile(bucket, file){
+  if(!file) return null;
+  const path = `${myId()}/${Date.now()}-${file.name}`;
+  const { error } = await sb.storage.from(bucket).upload(path, file);
+  if(error){ toast("Upload failed: " + error.message); return null; }
+  const { data } = sb.storage.from(bucket).getPublicUrl(path);
+  return data.publicUrl;
+}
+function pickFile(accept){
+  return new Promise(resolve=>{
+    const input = document.createElement('input');
+    input.type='file'; input.accept=accept||'*';
+    input.onchange = () => resolve(input.files[0] || null);
+    input.click();
+  });
+}
+
+/* ================= GENERIC FEED TABS ================= */
+async function fetchFeed(cfg){
+  const { data, error } = await sb.from(cfg.table).select('*').order('created_at', {ascending:false});
+  if(error){ toast(error.message); return []; }
+  return data;
+}
+async function fetchComments(type, id){
+  const { data } = await sb.from('comments').select('*').eq('content_type', type).eq('content_id', id).order('created_at');
+  return data || [];
+}
+async function renderFeedTab(cfg){
+  const items = await fetchFeed(cfg);
+  const canPost = cfg.studentPost || canManage(cfg.admin);
+  const listHtml = items.length ? `<div class="card-list">${items.map(it=>`
+    <div class="card" onclick="openFeedDetail('${cfg.key}','${it.id}')">
+      <div class="card-row"><div class="card-thumb">${cfg.thumb}</div>
+        <div class="card-body">
+          <p class="card-title">${esc(it.title)}</p>
+          <p class="card-snippet">${esc(it.body)}</p>
+          <div class="card-meta"><span class="chip">${it.anonymous ? "Anonymous" : "Student"}</span><span>${timeAgo(it.created_at)}</span></div>
+        </div></div>
+      <div class="stat-row"><span>${ICONS.heart} ${it.reactions||0}</span></div>
+    </div>`).join('')}</div>`
+    : `<div class="empty"><div class="e-icon">${ICONS[cfg.icon]}</div><p class="e-title">Nothing here yet</p><p>${cfg.emptyMsg}</p></div>`;
+  return `<div class="panel-head"><h1>${cfg.title}</h1>${canPost?`<button class="fab" onclick="openFeedForm('${cfg.key}')">+</button>`:''}</div>${listHtml}`;
+}
+function openFeedForm(key){
+  const cfg = TABS.find(t=>t.key===key);
+  openSheet(`
+    <h2 style="margin:0 0 14px;font-size:16px;">New ${cfg.title.replace(/s$/,'')} post</h2>
+    <div class="field"><label>Title</label><input id="f-title"></div>
+    <div class="field"><label>Details</label><textarea id="f-body"></textarea></div>
+    <div class="field"><label>Attach image or PDF</label><div class="upload-box" id="f-upload-label" onclick="pickAndLabel('f-upload-label','image/*,.pdf')">${ICONS.upload}<div>Tap to upload</div></div></div>
+    ${cfg.anonymous ? `<div class="toggle-row"><span>Post anonymously</span><button class="switch" id="f-anon" onclick="this.classList.toggle('on')"></button></div>` : ''}
+    <button class="btn btn-primary btn-block" onclick="submitFeed('${key}')">Post</button>
+  `);
+  window._pendingFile = null;
+}
+async function pickAndLabel(labelId, accept){
+  const file = await pickFile(accept);
+  if(file){ window._pendingFile = file; document.getElementById(labelId).querySelector('div').textContent = file.name; }
+}
+async function submitFeed(key){
+  const cfg = TABS.find(t=>t.key===key);
+  const title = document.getElementById('f-title').value.trim();
+  const body = document.getElementById('f-body').value.trim();
+  if(!title || !body){ toast("Add a title and details first"); return; }
+  const anonEl = document.getElementById('f-anon');
+  const anon = anonEl ? anonEl.classList.contains('on') : false;
+  let image_url = null;
+  if(window._pendingFile){ image_url = await uploadFile('attachments', window._pendingFile); }
+  const { error } = await sb.from(cfg.table).insert({ title, body, author_id: myId(), anonymous: anon, image_url });
+  if(error){ toast(error.message); return; }
+  closeSheet(); toast("Posted"); renderPanels();
+}
+async function openFeedDetail(key, id){
+  const cfg = TABS.find(t=>t.key===key);
+  const { data: it } = await sb.from(cfg.table).select('*').eq('id', id).single();
+  const comments = await fetchComments(key, id);
+  const mine = it.author_id === myId();
+  openSheet(`
+    <div class="detail-thumb">${cfg.thumb}</div>
+    <p class="detail-title">${esc(it.title)}</p>
+    <div class="detail-meta"><span class="chip">${it.anonymous?"Anonymous":"Student"}</span><span>${timeAgo(it.created_at)}</span></div>
+    <p class="detail-body">${esc(it.body)}</p>
+    <div class="detail-actions">
+      <button class="btn btn-ghost" onclick="reactFeed('${key}','${id}')">${ICONS.heart} React (${it.reactions||0})</button>
+      ${mine ? `<button class="btn btn-danger" onclick="deleteFeed('${key}','${id}')">Delete</button>` : ''}
+      ${canManage(cfg.admin) && !mine ? `<button class="btn btn-danger" onclick="deleteFeed('${key}','${id}')">Remove (moderation)</button>` : ''}
+    </div>
+    <hr class="divider">
+    <p style="font-weight:700;font-size:13px;margin:0 0 10px;">${comments.length} comments</p>
+    <div>${comments.length ? comments.map(c=>`<div class="comment"><div class="comment-head"><strong>Student</strong><span>${timeAgo(c.created_at)}</span></div><p>${esc(c.body)}</p></div>`).join('') : '<p style="font-size:12.5px;color:var(--muted);">No comments yet.</p>'}</div>
+    <div class="field" style="margin-top:12px;"><input id="f-comment" placeholder="Add a comment"></div>
+    <button class="btn btn-primary btn-block" onclick="addComment('${key}','${id}')">Comment</button>
+  `);
+}
+async function reactFeed(key,id){
+  const cfg = TABS.find(t=>t.key===key);
+  const { data: it } = await sb.from(cfg.table).select('reactions').eq('id', id).single();
+  await sb.from(cfg.table).update({ reactions: (it.reactions||0)+1 }).eq('id', id);
+  openFeedDetail(key,id);
+}
+async function deleteFeed(key,id){
+  const cfg = TABS.find(t=>t.key===key);
+  await sb.from(cfg.table).delete().eq('id', id);
+  closeSheet(); toast("Deleted"); renderPanels();
+}
+async function addComment(key,id){
+  const val = document.getElementById('f-comment').value.trim();
+  if(!val) return;
+  await sb.from('comments').insert({ content_type:key, content_id:id, author_id: myId(), body: val });
+  openFeedDetail(key,id);
+}
+
+/* ================= LISTING TABS (hostel / marketplace) ================= */
+async function renderListingTab(cfg){
+  const { data: items } = await sb.from(cfg.table).select('*').order('created_at', {ascending:false});
+  const list = items?.length ? `<div class="card-list">${items.map(it=>`
+    <div class="card" onclick="openListingDetail('${cfg.key}','${it.id}')">
+      <div class="card-row"><div class="card-thumb">${cfg.thumb}</div>
+        <div class="card-body"><p class="card-title">${esc(it.title)}${it.sold?' · Sold':''}</p>
+          <p class="card-snippet">${esc(it.description)}</p>
+          <div class="card-meta"><span class="chip price">${cfg.priceLabel}: ${esc(it.price)}</span><span class="chip">${esc(it.location||it.category||'')}</span></div>
+        </div></div></div>`).join('')}</div>`
+    : `<div class="empty"><div class="e-icon">${ICONS[cfg.icon]}</div><p class="e-title">Nothing listed yet</p><p>${cfg.emptyMsg}</p></div>`;
+  return `<div class="panel-head"><h1>${cfg.title}</h1><button class="fab" onclick="openListingForm('${cfg.key}')">+</button></div>${list}`;
+}
+function openListingForm(key){
+  const isHostel = key==="hostel";
+  openSheet(`
+    <h2 style="margin:0 0 14px;font-size:16px;">New ${isHostel?"hostel listing":"marketplace item"}</h2>
+    <div class="field"><label>Title</label><input id="l-title"></div>
+    <div class="field"><label>${isHostel?"Location":"Category"}</label><input id="l-sub"></div>
+    <div class="field"><label>Price</label><input id="l-price"></div>
+    <div class="field"><label>Description</label><textarea id="l-desc"></textarea></div>
+    <div class="field"><label>Photo</label><div class="upload-box" id="l-upload-label" onclick="pickAndLabel('l-upload-label','image/*')">${ICONS.upload}<div>Tap to upload</div></div></div>
+    ${!isHostel? `<div class="field"><label>Contact</label><input id="l-contact"></div><p style="font-size:11.5px;color:var(--muted);margin-top:-4px;">Pay on delivery only.</p>` : ''}
+    <button class="btn btn-primary btn-block" onclick="submitListing('${key}')">Post listing</button>
+  `);
+  window._pendingFile = null;
+}
+async function submitListing(key){
+  const title = document.getElementById('l-title').value.trim();
+  const sub = document.getElementById('l-sub').value.trim();
+  const price = document.getElementById('l-price').value.trim();
+  const desc = document.getElementById('l-desc').value.trim();
+  if(!title||!price||!desc){ toast("Fill in the required fields"); return; }
+  let photo_urls = [];
+  if(window._pendingFile){
+    const bucket = key==='hostel' ? 'hostel-photos' : 'marketplace-photos';
+    const url = await uploadFile(bucket, window._pendingFile);
+    if(url) photo_urls = [url];
+  }
+  const row = key==='hostel'
+    ? { title, location: sub, price, description: desc, photo_urls, author_id: myId() }
+    : { title, category: sub, price, description: desc, photo_urls, seller_id: myId() };
+  const table = key==='hostel' ? 'hostel_listings' : 'marketplace_items';
+  const { error } = await sb.from(table).insert(row);
+  if(error){ toast(error.message); return; }
+  closeSheet(); toast("Listed"); renderPanels();
+}
+async function openListingDetail(key,id){
+  const isHostel = key==='hostel';
+  const table = isHostel ? 'hostel_listings' : 'marketplace_items';
+  const reviewTable = isHostel ? 'hostel_reviews' : 'marketplace_reviews';
+  const fk = isHostel ? 'listing_id' : 'item_id';
+  const { data: it } = await sb.from(table).select('*').eq('id', id).single();
+  const { data: reviews } = await sb.from(reviewTable).select('*').eq(fk, id);
+  const cfg = TABS.find(t=>t.key===key);
+  const mine = (it.author_id||it.seller_id) === myId();
+  openSheet(`
+    <div class="detail-thumb">${cfg.thumb}</div>
+    <p class="detail-title">${esc(it.title)}${it.sold?' · Sold':''}</p>
+    <div class="detail-meta"><span class="chip">${esc(it.location||it.category||'')}</span><span class="chip price">${cfg.priceLabel}: ${esc(it.price)}</span></div>
+    <p class="detail-body">${esc(it.description)}</p>
+    <div class="detail-actions">
+      <button class="btn btn-primary" onclick="${isHostel?`openHostelChat('${id}')`:`toast('Message sent to seller')`}">${isHostel?'Join group chat':'Message seller'}</button>
+      ${!isHostel && mine ? `<button class="btn btn-ghost" onclick="markSold('${id}', ${!it.sold})">${it.sold?'Mark available':'Mark sold'}</button>`:''}
+      ${mine ? `<button class="btn btn-danger" onclick="deleteListing('${table}','${id}')">Delete</button>`:''}
+    </div>
+    <hr class="divider">
+    <p style="font-weight:700;font-size:13px;margin:0 0 10px;">Reviews</p>
+    ${reviews?.length ? reviews.map(r=>`<div class="comment"><div class="comment-head"><strong>Student</strong><span class="stars">${'★'.repeat(r.stars)}${'☆'.repeat(5-r.stars)}</span></div><p>${esc(r.body)}</p></div>`).join('') : '<p style="font-size:12.5px;color:var(--muted);">No reviews yet.</p>'}
+    <div class="field" style="margin-top:12px;"><input id="l-review" placeholder="Leave a review"></div>
+    <button class="btn btn-primary btn-block" onclick="addReview('${key}','${id}')">Submit review</button>
+  `);
+}
+async function markSold(id, sold){ await sb.from('marketplace_items').update({sold}).eq('id',id); openListingDetail('marketplace', id); }
+async function deleteListing(table, id){ await sb.from(table).delete().eq('id',id); closeSheet(); toast("Deleted"); renderPanels(); }
+async function addReview(key,id){
+  const val = document.getElementById('l-review').value.trim();
+  if(!val) return;
+  const isHostel = key==='hostel';
+  const table = isHostel ? 'hostel_reviews' : 'marketplace_reviews';
+  const row = isHostel ? {listing_id:id, user_id:myId(), stars:5, body:val} : {item_id:id, reviewer_id:myId(), stars:5, body:val};
+  await sb.from(table).insert(row);
+  openListingDetail(key,id);
+}
+let hostelChatChannel = null;
+async function openHostelChat(listingId){
+  const { data: msgs } = await sb.from('hostel_chat_messages').select('*').eq('listing_id', listingId).order('created_at');
+  openSheet(`
+    <h2 style="margin:0 0 14px;font-size:16px;">Group chat</h2>
+    <div id="chatMsgs" style="display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;margin-bottom:12px;">
+      ${(msgs||[]).map(m=>`<div class="comment"><div class="comment-head"><strong>Student</strong><span>${timeAgo(m.created_at)}</span></div><p>${esc(m.body)}</p></div>`).join('') || '<p style="font-size:12.5px;color:var(--muted);">No messages yet — say hello.</p>'}
+    </div>
+    <div class="field"><input id="chat-input" placeholder="Message the group"></div>
+    <button class="btn btn-primary btn-block" onclick="sendHostelMsg('${listingId}')">Send</button>
+  `);
+  if(hostelChatChannel) sb.removeChannel(hostelChatChannel);
+  hostelChatChannel = sb.channel('hostel-'+listingId)
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'hostel_chat_messages', filter:`listing_id=eq.${listingId}`}, payload=>{
+      const box = document.getElementById('chatMsgs');
+      if(box) box.insertAdjacentHTML('beforeend', `<div class="comment"><div class="comment-head"><strong>Student</strong><span>now</span></div><p>${esc(payload.new.body)}</p></div>`);
+    }).subscribe();
+}
+async function sendHostelMsg(listingId){
+  const val = document.getElementById('chat-input').value.trim();
+  if(!val) return;
+  document.getElementById('chat-input').value = '';
+  await sb.from('hostel_chat_messages').insert({listing_id:listingId, author_id:myId(), body:val});
+}
+
+/* ================= NOTES ================= */
+let noteFilter = {faculty:"", dept:"", level:""};
+async function renderNotesTab(){
+  const facOpts = Object.keys(FACULTIES).map(f=>`<option ${noteFilter.faculty===f?'selected':''}>${f}</option>`).join('');
+  const deptOpts = noteFilter.faculty ? (FACULTIES[noteFilter.faculty]||[]).map(d=>`<option ${noteFilter.dept===d?'selected':''}>${d}</option>`).join('') : '';
+  let q = sb.from('notes').select('*').order('created_at',{ascending:false});
+  if(noteFilter.faculty) q = q.eq('faculty', noteFilter.faculty);
+  if(noteFilter.dept) q = q.eq('department', noteFilter.dept);
+  if(noteFilter.level) q = q.eq('level', noteFilter.level);
+  const { data: notes } = await q;
+  const canPost = canManage('content_admin');
+  const list = notes?.length ? `<div class="card-list">${notes.map(n=>`
+    <div class="card" onclick="openNoteDetail('${n.id}')">
+      <div class="card-row"><div class="card-thumb">📘</div>
+        <div class="card-body"><p class="card-title">${esc(n.title)}</p>
+        <p class="card-snippet">${esc(n.course_code||'')} · ${esc(n.level||'')}L · ${esc(n.semester||'')}</p>
+        <div class="card-meta"><span class="chip">${esc(n.department||'')}</span></div></div></div></div>`).join('')}</div>`
+    : `<div class="empty"><div class="e-icon">${ICONS.notes}</div><p class="e-title">No notes uploaded yet</p><p>Adjust filters or check back later.</p></div>`;
+  return `
+    <div class="panel-head"><h1>Notes</h1>${canPost?`<button class="fab" onclick="openNoteForm()">+</button>`:''}</div>
+    <div class="filter-row">
+      <select onchange="noteFilter.faculty=this.value;noteFilter.dept='';renderPanels()"><option value="">Faculty</option>${facOpts}</select>
+      <select onchange="noteFilter.dept=this.value;renderPanels()"><option value="">Department</option>${deptOpts}</select>
+      <select onchange="noteFilter.level=this.value;renderPanels()"><option value="">Level</option>${LEVELS.map(l=>`<option ${noteFilter.level===l?'selected':''}>${l}</option>`).join('')}</select>
+    </div>
+    ${list}`;
+}
+function openNoteForm(){
+  const facOpts = Object.keys(FACULTIES).map(f=>`<option>${f}</option>`).join('');
+  openSheet(`
+    <h2 style="margin:0 0 14px;font-size:16px;">Upload note</h2>
+    <div class="field"><label>Title</label><input id="n-title"></div>
+    <div class="field"><label>Faculty</label><select id="n-fac" onchange="fillDeptOptions()">${facOpts}</select></div>
+    <div class="field"><label>Department</label><select id="n-dept"></select></div>
+    <div class="field"><label>Level</label><select id="n-level">${LEVELS.map(l=>`<option>${l}</option>`).join('')}</select></div>
+    <div class="field"><label>Semester</label><select id="n-sem">${SEMESTERS.map(s=>`<option>${s}</option>`).join('')}</select></div>
+    <div class="field"><label>Course code</label><input id="n-course"></div>
+    <div class="field"><label>File</label><div class="upload-box" id="n-upload-label" onclick="pickAndLabel('n-upload-label','.pdf,image/*')">${ICONS.upload}<div>Tap to upload</div></div></div>
+    <button class="btn btn-primary btn-block" onclick="submitNote()">Upload</button>
+  `);
+  window._pendingFile = null;
+  fillDeptOptions();
+}
+function fillDeptOptions(){ document.getElementById('n-dept').innerHTML = (FACULTIES[document.getElementById('n-fac').value]||[]).map(d=>`<option>${d}</option>`).join(''); }
+async function submitNote(){
+  const title = document.getElementById('n-title').value.trim();
+  const course_code = document.getElementById('n-course').value.trim();
+  if(!title||!course_code){ toast("Fill in the required fields"); return; }
+  let file_url = null;
+  if(window._pendingFile) file_url = await uploadFile('notes-files', window._pendingFile);
+  const { error } = await sb.from('notes').insert({
+    title, course_code, file_url, author_id: myId(),
+    faculty: document.getElementById('n-fac').value,
+    department: document.getElementById('n-dept').value,
+    level: document.getElementById('n-level').value,
+    semester: document.getElementById('n-sem').value
+  });
+  if(error){ toast(error.message); return; }
+  closeSheet(); toast("Note uploaded"); renderPanels();
+}
+async function openNoteDetail(id){
+  const { data: n } = await sb.from('notes').select('*').eq('id', id).single();
+  openSheet(`
+    <div class="detail-thumb">📘</div>
+    <p class="detail-title">${esc(n.title)}</p>
+    <div class="detail-meta"><span class="chip">${esc(n.course_code||'')}</span><span class="chip">${esc(n.level||'')}L</span><span class="chip">${esc(n.semester||'')}</span></div>
+    <p class="detail-body">${esc(n.department||'')} — ${esc(n.faculty||'')}</p>
+    <div class="detail-actions">${n.file_url?`<a class="btn btn-primary" href="${n.file_url}" target="_blank">Open file</a>`:`<button class="btn btn-ghost" disabled>No file attached</button>`}</div>
+    <hr class="divider">
+    <p style="font-weight:700;font-size:13px;margin:0 0 10px;">Was this useful?</p>
+    <div class="detail-actions"><button class="btn btn-ghost" onclick="rateNote('${id}',true)">👍 Useful</button><button class="btn btn-ghost" onclick="rateNote('${id}',false)">👎 Not useful</button></div>
+  `);
+}
+async function rateNote(id, useful){
+  await sb.from('note_ratings').upsert({note_id:id, user_id:myId(), useful}, {onConflict:'note_id,user_id'});
+  toast("Thanks for rating!");
+}
+
+/* ================= CBT ================= */
+let cbtFilter = {course:""};
+let quizState = null;
+async function renderCBT(){
+  if(quizState) return renderQuiz();
+  const key = cbtFilter.course.trim().toUpperCase();
+  const canPost = canManage('content_admin');
+  let body;
+  if(!key){
+    body = `<div class="empty"><div class="e-icon">${ICONS.notes}</div><p class="e-title">Pick a course</p><p>Type a course code below.</p></div>`;
+  } else {
+    const { data: qs } = await sb.from('cbt_questions').select('*').eq('course_code', key);
+    if(!qs || !qs.length){
+      body = `<div class="empty"><div class="e-icon">${ICONS.notes}</div><p class="e-title">No questions yet</p><p>No questions available yet for ${esc(key)}.</p></div>`;
+    } else {
+      window._cbtBank = qs;
+      body = `<div class="card" onclick="startQuizSetup()"><div class="card-row"><div class="card-thumb">📝</div><div class="card-body"><p class="card-title">${esc(key)} practice set</p><p class="card-snippet">${qs.length} questions available</p></div></div></div>`;
+    }
+  }
+  return `
+    <div class="panel-head"><h1>Practice Questions</h1>${canPost?`<button class="fab" onclick="openCbtForm()">+</button>`:''}</div>
+    <div class="field"><input placeholder="Course code e.g. CSC201" value="${esc(cbtFilter.course)}" oninput="cbtFilter.course=this.value;renderPanels()"></div>
+    ${body}`;
+}
+function openCbtForm(){
+  openSheet(`
+    <h2 style="margin:0 0 14px;font-size:16px;">Add practice question</h2>
+    <div class="field"><label>Course code</label><input id="q-course"></div>
+    <div class="field"><label>Question</label><textarea id="q-text"></textarea></div>
+    <div class="field"><label>Option A</label><input id="q-a"></div>
+    <div class="field"><label>Option B</label><input id="q-b"></div>
+    <div class="field"><label>Option C</label><input id="q-c"></div>
+    <div class="field"><label>Option D</label><input id="q-d"></div>
+    <div class="field"><label>Correct option</label><select id="q-correct"><option>A</option><option>B</option><option>C</option><option>D</option></select></div>
+    <button class="btn btn-primary btn-block" onclick="submitCbt()">Add question</button>
+  `);
+}
+async function submitCbt(){
+  const course_code = document.getElementById('q-course').value.trim().toUpperCase();
+  const question = document.getElementById('q-text').value.trim();
+  const opts = ['q-a','q-b','q-c','q-d'].map(id=>document.getElementById(id).value.trim());
+  if(!course_code||!question||opts.some(o=>!o)){ toast("Fill in all fields"); return; }
+  await sb.from('cbt_questions').insert({
+    course_code, question, option_a:opts[0], option_b:opts[1], option_c:opts[2], option_d:opts[3],
+    correct_option: document.getElementById('q-correct').value, created_by: myId()
+  });
+  cbtFilter.course = course_code;
+  closeSheet(); toast("Question added"); renderPanels();
+}
+function startQuizSetup(){
+  openSheet(`<h2 style="margin:0 0 14px;font-size:16px;">Choose a timer</h2>
+    <div class="card-list">${[15,30,45,60].map(m=>`<button class="btn btn-ghost btn-block" style="text-align:left;margin-bottom:8px;" onclick="beginQuiz(${m})">${m} minutes</button>`).join('')}</div>`);
+}
+function beginQuiz(minutes){
+  quizState = {course:cbtFilter.course, questions: window._cbtBank.slice(), i:0, answers:[], secondsLeft:minutes*60, score:null};
+  closeSheet(); renderPanels();
+  quizState.timer = setInterval(()=>{
+    quizState.secondsLeft--;
+    if(quizState.secondsLeft<=0){ clearInterval(quizState.timer); finishQuiz(); }
+    else { const el=document.getElementById('quizClock'); if(el) el.textContent=fmtTime(quizState.secondsLeft); }
+  },1000);
+}
+function fmtTime(s){ const m=Math.floor(s/60); const ss=s%60; return `${m}:${ss<10?'0':''}${ss}`; }
+function renderQuiz(){
+  if(quizState.score !== null){
+    return `<div class="panel-head"><h1>Results</h1></div>
+      <div class="empty"><div class="e-icon">📝</div><p class="e-title">Score: ${quizState.score}/${quizState.questions.length}</p><p>Nice work.</p></div>
+      <button class="btn btn-primary btn-block" onclick="quizState=null;renderPanels()">Done</button>`;
+  }
+  const q = quizState.questions[quizState.i];
+  const chosen = quizState.answers[quizState.i];
+  const opts = [q.option_a,q.option_b,q.option_c,q.option_d];
+  return `
+    <div class="panel-head"><h1>${esc(quizState.course)}</h1></div>
+    <div class="quiz-timer"><span>Question ${quizState.i+1} of ${quizState.questions.length}</span><span id="quizClock">${fmtTime(quizState.secondsLeft)}</span></div>
+    <p style="font-size:14.5px;font-weight:600;line-height:1.5;margin-bottom:14px;">${esc(q.question)}</p>
+    ${['A','B','C','D'].map((l,idx)=>`<div class="q-option ${chosen===l?'selected':''}" onclick="answerQuiz('${l}')">${l}. ${esc(opts[idx])}</div>`).join('')}
+    <div class="detail-actions" style="margin-top:14px;">
+      ${quizState.i>0?`<button class="btn btn-ghost" onclick="quizState.i--;renderPanels()">Back</button>`:''}
+      ${quizState.i<quizState.questions.length-1?`<button class="btn btn-primary" onclick="quizState.i++;renderPanels()">Next</button>`:`<button class="btn btn-primary" onclick="finishQuiz()">Submit</button>`}
+    </div>`;
+}
+function answerQuiz(l){ quizState.answers[quizState.i]=l; renderPanels(); }
+function finishQuiz(){
+  if(quizState.timer) clearInterval(quizState.timer);
+  let score=0;
+  quizState.questions.forEach((q,i)=>{ if(quizState.answers[i]===q.correct_option) score++; });
+  quizState.score = score;
+  renderPanels();
+}
+
+/* ================= TIMETABLE ================= */
+let ttFilter = {faculty:"", dept:"", level:"", sub:"class"};
+async function renderTimetable(){
+  const facOpts = Object.keys(FACULTIES).map(f=>`<option ${ttFilter.faculty===f?'selected':''}>${f}</option>`).join('');
+  const deptOpts = ttFilter.faculty ? (FACULTIES[ttFilter.faculty]||[]).map(d=>`<option ${ttFilter.dept===d?'selected':''}>${d}</option>`).join('') : '';
+  const canPost = canManage('timetable_admin');
+  const table = ttFilter.sub==='class' ? 'timetable_class' : 'timetable_exam';
+  let q = sb.from(table).select('*');
+  if(ttFilter.faculty) q = q.eq('faculty', ttFilter.faculty);
+  if(ttFilter.dept) q = q.eq('department', ttFilter.dept);
+  if(ttFilter.level) q = q.eq('level', ttFilter.level);
+  const { data: items } = await q;
+  const list = items?.length ? `<div class="card-list">${items.map(e=>`
+    <div class="card" onclick="openTtDetail('${table}','${e.id}')">
+      <div class="card-row"><div class="card-thumb">${ttFilter.sub==='class'?'🗓️':'✍️'}</div>
+      <div class="card-body"><p class="card-title">${esc(e.course_code)}</p>
+      <p class="card-snippet">${esc(e.day||e.exam_date)} · ${esc(e.time)} · ${esc(e.venue)}</p></div></div></div>`).join('')}</div>`
+    : `<div class="empty"><div class="e-icon">${ICONS.home}</div><p class="e-title">No entries yet</p><p>No ${ttFilter.sub==='class'?'classes':'exams'} scheduled yet for this filter.</p></div>`;
+  return `
+    <div class="panel-head"><h1>Timetable</h1>${canPost?`<button class="fab" onclick="openTtForm()">+</button>`:''}</div>
+    <div class="filter-row">
+      <select onchange="ttFilter.sub=this.value;renderPanels()">
+        <option value="class" ${ttFilter.sub==='class'?'selected':''}>Class timetable</option>
+        <option value="exam" ${ttFilter.sub==='exam'?'selected':''}>Exam timetable</option>
+      </select>
+      <select onchange="ttFilter.faculty=this.value;ttFilter.dept='';renderPanels()"><option value="">Faculty</option>${facOpts}</select>
+      <select onchange="ttFilter.dept=this.value;renderPanels()"><option value="">Department</option>${deptOpts}</select>
+      <select onchange="ttFilter.level=this.value;renderPanels()"><option value="">Level</option>${LEVELS.map(l=>`<option ${ttFilter.level===l?'selected':''}>${l}</option>`).join('')}</select>
+    </div>
+    ${list}`;
+}
+function openTtForm(){
+  const isClass = ttFilter.sub==='class';
+  const facOpts = Object.keys(FACULTIES).map(f=>`<option>${f}</option>`).join('');
+  openSheet(`
+    <h2 style="margin:0 0 14px;font-size:16px;">Add ${isClass?'class':'exam'} entry</h2>
+    <div class="field"><label>Course code</label><input id="t-course"></div>
+    <div class="field"><label>Faculty</label><select id="t-fac" onchange="fillTtDept()">${facOpts}</select></div>
+    <div class="field"><label>Department</label><select id="t-dept"></select></div>
+    <div class="field"><label>Level</label><select id="t-level">${LEVELS.map(l=>`<option>${l}</option>`).join('')}</select></div>
+    ${!isClass?`<div class="field"><label>Semester</label><select id="t-sem">${SEMESTERS.map(s=>`<option>${s}</option>`).join('')}</select></div>`:''}
+    <div class="field"><label>${isClass?'Day':'Date'}</label><input id="t-day"></div>
+    <div class="field"><label>Time</label><input id="t-time"></div>
+    <div class="field"><label>Venue</label><input id="t-venue"></div>
+    ${isClass?`<div class="field"><label>Lecturer (optional)</label><input id="t-lect"></div>`:''}
+    <button class="btn btn-primary btn-block" onclick="submitTt(${isClass})">Save</button>
+  `);
+  fillTtDept();
+}
+function fillTtDept(){ document.getElementById('t-dept').innerHTML = (FACULTIES[document.getElementById('t-fac').value]||[]).map(d=>`<option>${d}</option>`).join(''); }
+async function submitTt(isClass){
+  const course_code = document.getElementById('t-course').value.trim();
+  const day = document.getElementById('t-day').value.trim();
+  const time = document.getElementById('t-time').value.trim();
+  const venue = document.getElementById('t-venue').value.trim();
+  if(!course_code||!day||!time||!venue){ toast("Fill in all required fields"); return; }
+  const base = { course_code, time, venue,
+    faculty: document.getElementById('t-fac').value,
+    department: document.getElementById('t-dept').value,
+    level: document.getElementById('t-level').value,
+    created_by: myId() };
+  if(isClass){
+    await sb.from('timetable_class').insert({...base, day, lecturer: document.getElementById('t-lect').value.trim()});
+  } else {
+    await sb.from('timetable_exam').insert({...base, exam_date: day, semester: document.getElementById('t-sem').value});
+  }
+  closeSheet(); toast("Saved"); renderPanels();
+}
+async function openTtDetail(table,id){
+  const { data: e } = await sb.from(table).select('*').eq('id', id).single();
+  openSheet(`
+    <div class="detail-thumb">${table==='timetable_class'?'🗓️':'✍️'}</div>
+    <p class="detail-title">${esc(e.course_code)}</p>
+    <div class="detail-meta"><span class="chip">${esc(e.department||'')}</span><span class="chip">${esc(e.level||'')}L</span>${e.semester?`<span class="chip">${esc(e.semester)}</span>`:''}</div>
+    <p class="detail-body">${esc(e.day||e.exam_date)} at ${esc(e.time)}\nVenue: ${esc(e.venue)}${e.lecturer?`\nLecturer: ${esc(e.lecturer)}`:''}</p>
+    <div class="detail-actions"><button class="btn btn-danger" onclick="deleteTt('${table}','${id}')">Delete</button></div>
+  `);
+}
+async function deleteTt(table,id){ await sb.from(table).delete().eq('id',id); closeSheet(); toast("Deleted"); renderPanels(); }
+
+/* ================= SPOTLIGHT ================= */
+function currentWeekId(){
+  const now = new Date();
+  const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  const week = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(week).padStart(2,'0')}`;
+}
+async function renderSpotlight(){
+  const wk = currentWeekId();
+  const { data: items } = await sb.from('spotlight_entries').select('*').eq('week_id', wk).order('votes', {ascending:false});
+  const { data: archive } = await sb.from('spotlight_archive').select('*').order('archived_at', {ascending:false}).limit(10);
+  const list = items?.length ? `<div class="card-list">${items.map(s=>`
+    <div class="card" onclick="openSpotlightDetail('${s.id}')">
+      <div class="card-row"><div class="card-thumb">🌟</div>
+      <div class="card-body"><p class="card-title">${esc(s.name)}</p><p class="card-snippet">${esc(s.department||'')} · ${esc(s.level||'')}L</p>
+      <div class="card-meta"><span class="chip">${s.votes} votes</span></div></div></div></div>`).join('')}</div>`
+    : `<div class="empty"><div class="e-icon">🌟</div><p class="e-title">No entries yet this week</p><p>Submit yourself to be this week's Face of the Week.</p></div>`;
+  return `
+    <div class="panel-head"><h1>Spotlight</h1><button class="fab" onclick="openSpotlightForm()">+</button></div>
+    <div class="card" style="margin-bottom:14px;background:var(--green-light);border:none;"><p style="font-size:12.5px;font-weight:700;color:var(--green-dark);margin:0;">⏱ This week's round: ${esc(wk)} — one vote per student.</p></div>
+    ${list}
+    <h2 style="font-size:14px;margin:22px 0 10px;">Past winners</h2>
+    ${archive?.length ? `<div class="card-list">${archive.map(w=>`
+      <div class="card"><div class="card-row"><div class="card-thumb">👑</div>
+      <div class="card-body"><p class="card-title">${esc(w.name)}</p><p class="card-snippet">${esc(w.department||'')} · ${esc(w.week_id)}</p></div></div></div>`).join('')}</div>`
+      : `<p style="font-size:12.5px;color:var(--muted);">No past winners yet.</p>`}`;
+}
+function openSpotlightForm(){
+  const facOpts = Object.keys(FACULTIES).map(f=>`<option>${f}</option>`).join('');
+  openSheet(`
+    <h2 style="margin:0 0 14px;font-size:16px;">Submit for Spotlight</h2>
+    <div class="field"><label>Photo</label><div class="upload-box" id="s-upload-label" onclick="pickAndLabel('s-upload-label','image/*')">${ICONS.upload}<div>Tap to upload</div></div></div>
+    <div class="field"><label>Name</label><input id="s-name"></div>
+    <div class="field"><label>Faculty</label><select id="s-fac" onchange="fillSpotDept()">${facOpts}</select></div>
+    <div class="field"><label>Department</label><select id="s-dept"></select></div>
+    <div class="field"><label>Level</label><select id="s-level">${LEVELS.map(l=>`<option>${l}</option>`).join('')}</select></div>
+    <button class="btn btn-primary btn-block" onclick="submitSpotlight()">Submit</button>
+  `);
+  window._pendingFile = null;
+  fillSpotDept();
+}
+function fillSpotDept(){ document.getElementById('s-dept').innerHTML = (FACULTIES[document.getElementById('s-fac').value]||[]).map(d=>`<option>${d}</option>`).join(''); }
+async function submitSpotlight(){
+  const name = document.getElementById('s-name').value.trim();
+  if(!name){ toast("Enter a name"); return; }
+  if(!window._pendingFile){ toast("Upload a photo"); return; }
+  const photo_url = await uploadFile('spotlight-photos', window._pendingFile);
+  const { error } = await sb.from('spotlight_entries').insert({
+    student_id: myId(), name, photo_url,
+    faculty: document.getElementById('s-fac').value,
+    department: document.getElementById('s-dept').value,
+    level: document.getElementById('s-level').value,
+    week_id: currentWeekId()
+  });
+  if(error){ toast(error.message.includes('duplicate') ? "You already submitted this week" : error.message); return; }
+  closeSheet(); toast("Submitted"); renderPanels();
+}
+async function openSpotlightDetail(id){
+  const { data: s } = await sb.from('spotlight_entries').select('*').eq('id', id).single();
+  openSheet(`
+    <div class="detail-thumb">🌟</div>
+    <p class="detail-title">${esc(s.name)}</p>
+    <div class="detail-meta"><span class="chip">${esc(s.department||'')}</span><span class="chip">${esc(s.level||'')}L</span></div>
+    <p class="detail-body">Current votes: ${s.votes}</p>
+    <button class="btn btn-primary btn-block" onclick="voteSpotlight('${id}')">Vote</button>
+  `);
+}
+async function voteSpotlight(id){
+  const wk = currentWeekId();
+  const { error } = await sb.from('spotlight_votes').insert({entry_id:id, voter_id:myId(), week_id:wk});
+  if(error){ toast(error.message.includes('duplicate') ? "You already voted this week" : error.message); return; }
+  const { data: s } = await sb.from('spotlight_entries').select('votes').eq('id', id).single();
+  await sb.from('spotlight_entries').update({votes:(s.votes||0)+1}).eq('id', id);
+  toast("Vote counted"); openSpotlightDetail(id);
+}
+
+/* ================= FEEDBACK ================= */
+async function renderFeedback(){
+  const isAdmin = profile.role !== 'student';
+  let items = [];
+  if(isAdmin){ const { data } = await sb.from('app_feedback').select('*').order('created_at',{ascending:false}); items = data||[]; }
+  const list = items.length ? `<div class="card-list">${items.map(f=>`
+    <div class="card" onclick="openFeedbackDetail('${f.id}')"><div class="card-row"><div class="card-thumb">💬</div>
+    <div class="card-body"><p class="card-title stars">${'★'.repeat(f.stars)}${'☆'.repeat(5-f.stars)}</p><p class="card-snippet">${esc(f.body)}</p></div></div></div>`).join('')}</div>`
+    : `<div class="empty"><div class="e-icon">💬</div><p class="e-title">No feedback yet</p><p>Be the first to rate the app.</p></div>`;
+  return `
+    <div class="panel-head"><h1>Feedback & Ratings</h1></div>
+    <div class="card" style="margin-bottom:16px;">
+      <p style="font-weight:700;font-size:13.5px;margin:0 0 10px;">Rate Fuadsi Buzz</p>
+      <div style="font-size:22px;margin-bottom:10px;" id="starPicker">${[1,2,3,4,5].map(n=>`<span onclick="setStars(${n})" style="cursor:pointer;color:${n<=(window._stars||0)?'#F2B705':'#DDE5DF'}">★</span>`).join('')}</div>
+      <textarea id="fb-text" placeholder="Suggestions or thoughts"></textarea>
+      <button class="btn btn-primary btn-block" style="margin-top:10px;" onclick="submitFeedback()">Submit</button>
+    </div>
+    ${isAdmin ? list : ''}`;
+}
+function setStars(n){ window._stars=n; renderPanels(); }
+async function submitFeedback(){
+  const text = document.getElementById('fb-text').value.trim();
+  if(!window._stars){ toast("Pick a star rating"); return; }
+  await sb.from('app_feedback').insert({user_id: myId(), stars: window._stars, body: text||"(no comment)"});
+  window._stars=0;
+  toast("Thanks for the feedback"); renderPanels();
+}
+async function openFeedbackDetail(id){
+  const { data: f } = await sb.from('app_feedback').select('*').eq('id', id).single();
+  openSheet(`<p class="detail-title stars">${'★'.repeat(f.stars)}${'☆'.repeat(5-f.stars)}</p><p class="detail-body">${esc(f.body)}</p>`);
+}
+
+/* ================= MORE / ABOUT ================= */
+function renderMore(){
+  const items = TABS.filter(t=>!t.nav);
+  return `<div class="panel-head"><h1>More</h1></div>
+  <div class="more-grid">${items.map(t=>`<div class="more-item" onclick="goTab('${t.key}')"><div class="mi-icon">${t.thumb||ICONS[t.icon]}</div><span>${t.label}</span></div>`).join('')}</div>`;
+}
+function renderAbout(){
+  return `
+  <div class="panel-head"><h1>About</h1></div>
+  <div class="about-hero">
+    <h1>A new federal university, rooted in agriculture</h1>
+    <p>The Federal University of Agriculture and Development Studies, Iragbiji (FUADSI) was established by an Act of the National Assembly, signed into law on February 20, 2025. Sited on land donated by the host community in Iragbiji, Osun State, FUADSI focuses on agriculture, applied sciences, and development studies — training graduates to tackle food security and rural development challenges in Nigeria and beyond.</p>
+  </div>
+  <div class="stat-grid">
+    <div class="stat-card"><b>Feb 2025</b><span>Established</span></div>
+    <div class="stat-card"><b>Iragbiji, Osun</b><span>Location</span></div>
+    <div class="stat-card"><b>Agric & Dev. Studies</b><span>Focus</span></div>
+    <div class="stat-card"><b>1,000+ hectares</b><span>Campus land</span></div>
+  </div>
+  <div class="about-block"><h2>Our vision</h2><p>To be a world-class centre of excellence in agricultural research, innovation, and development studies — driving sustainable solutions for food security, environmental stewardship, and human advancement.</p></div>
+  <div class="about-block"><h2>Our mission</h2><p>To provide quality education, research, and innovation that transform agriculture and development practice, and to train graduates equipped to address food production, climate, and sustainability challenges.</p></div>
+  <div class="about-block"><h2>What we stand for</h2>
+    <div class="values-grid">
+      <div class="value-card"><b>Excellence</b><span>Rigorous teaching, research, and standards in everything we do.</span></div>
+      <div class="value-card"><b>Sustainability</b><span>Practices that protect land, water, and community for the long term.</span></div>
+      <div class="value-card"><b>Innovation</b><span>New ideas and technology applied to old agricultural challenges.</span></div>
+      <div class="value-card"><b>Community impact</b><span>Work that improves life in Iragbiji and beyond.</span></div>
+    </div>
+  </div>
+  <div class="about-block"><h2>Find the campus</h2><p>FUADSI sits in Iragbiji, headquarters of Boripe Local Government Area, Osun State — about 5km from Ikirun, and a short drive from Osogbo, the state capital.</p></div>
+  <div class="about-block"><h2>Contact</h2><p>Iragbiji, Boripe LGA, Osun State, Nigeria<br>info@fuadsi.edu.ng · +234 8039152586</p></div>
+  <div class="about-footer"><strong>FUADSI BUZZ</strong> — The unofficial student portal for the Federal University of Agriculture and Development Studies, Iragbiji — practice, past questions, and campus life in one place.<br><br>
+  FUADSI BUZZ is an independent, student-built companion app and is not the university's official website. For admissions and official information, visit fuadsi.edu.ng.</div>`;
+}
+
+/* ================= MASTER RENDER ================= */
+async function renderPanels(){
+  const cfg = TABS.find(t=>t.key===activeTab);
+  let html = "<p style='padding:40px;text-align:center;color:var(--muted);'>Loading…</p>";
+  document.getElementById('panels').innerHTML = `<div class="panel active">${html}</div>`;
+  if(cfg.type==="feed") html = await renderFeedTab(cfg);
+  else if(cfg.type==="listing") html = await renderListingTab(cfg);
+  else if(cfg.type==="notes") html = await renderNotesTab();
+  else if(cfg.type==="cbt") html = await renderCBT();
+  else if(cfg.type==="timetable") html = await renderTimetable();
+  else if(cfg.type==="spotlight") html = await renderSpotlight();
+  else if(cfg.type==="feedback") html = await renderFeedback();
+  else if(cfg.type==="more") html = renderMore();
+  else if(cfg.type==="about") html = renderAbout();
+  document.getElementById('panels').innerHTML = `<div class="panel active">${html}</div>`;
+}
+
+setAuthMode('signin');
+initSession();
+</script>
+
+</body>
+</html>
