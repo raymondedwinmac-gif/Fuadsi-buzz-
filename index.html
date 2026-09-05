@@ -465,7 +465,7 @@ const ICONS = {
 const TABS = [
   {key:"updates", table:"updates", label:"Home", icon:"home", type:"feed", nav:true, title:"School Updates",
    emptyMsg:"No updates yet — announcements from the school will show up here.", admin:"content_admin", thumb:"📢"},
-  {key:"notes", label:"Notes", icon:"notes", type:"notes", nav:true, title:"Notes", admin:"content_admin", thumb:"📘"},
+  {key:"notes", label:"Library", icon:"notes", type:"notes", nav:true, title:"Library", admin:"content_admin", thumb:"📘"},
   {key:"gist", table:"hot_gist", label:"Hot Gist", icon:"gist", type:"feed", nav:true, title:"Hot Gist",
    emptyMsg:"No gist yet — be the first to drop something.", admin:"community_moderator", anonymous:true, thumb:"🔥", studentPost:true},
   {key:"marketplace", table:"marketplace_items", label:"Market", icon:"market", type:"listing", nav:true, title:"Student Marketplace",
@@ -754,9 +754,9 @@ async function renderNotesTab(){
         <div class="card-body"><p class="card-title">${esc(n.title)}</p>
         <p class="card-snippet">${esc(n.course_code||'')} · ${esc(n.level||'')}L · ${esc(n.semester||'')}</p>
         <div class="card-meta"><span class="chip">${esc(n.department||'')}</span></div></div></div></div>`).join('')}</div>`
-    : `<div class="empty"><div class="e-icon">${ICONS.notes}</div><p class="e-title">No notes uploaded yet</p><p>Adjust filters or check back later.</p></div>`;
+    : `<div class="empty"><div class="e-icon">${ICONS.notes}</div><p class="e-title">Library is empty</p><p>Adjust filters or check back later.</p></div>`;
   return `
-    <div class="panel-head"><h1>Notes</h1>${canPost?`<button class="fab" onclick="openNoteForm()">+</button>`:''}</div>
+    <div class="panel-head"><h1>Library</h1>${canPost?`<button class="fab" onclick="openNoteForm()">+</button>`:''}</div>
     <div class="filter-row">
       <select onchange="noteFilter.faculty=this.value;noteFilter.dept='';renderPanels()">${facOpts}</select>
       <select onchange="noteFilter.dept=this.value;renderPanels()">${deptOpts}</select>
@@ -767,7 +767,7 @@ async function renderNotesTab(){
 function openNoteForm(){
   const facOpts = `<option>All Faculties</option>` + Object.keys(FACULTIES).map(f=>`<option>${f}</option>`).join('');
   openSheet(`
-    <h2 style="margin:0 0 14px;font-size:16px;">Upload note</h2>
+    <h2 style="margin:0 0 14px;font-size:16px;">Upload to library</h2>
     <div class="field"><label>Title</label><input id="n-title"></div>
     <div class="field"><label>Faculty</label><select id="n-fac" onchange="fillDeptOptions()">${facOpts}</select></div>
     <div class="field"><label>Department</label><select id="n-dept"></select></div>
@@ -803,16 +803,27 @@ async function submitNote(){
 }
 async function openNoteDetail(id){
   const { data: n } = await sb.from('notes').select('*').eq('id', id).single();
+  const canManageNotes = canManage('content_admin');
   openSheet(`
     <div class="detail-thumb">📘</div>
     <p class="detail-title">${esc(n.title)}</p>
     <div class="detail-meta"><span class="chip">${esc(n.course_code||'')}</span><span class="chip">${esc(n.level||'')}L</span><span class="chip">${esc(n.semester||'')}</span></div>
     <p class="detail-body">${esc(n.department||'')} — ${esc(n.faculty||'')}</p>
     <div class="detail-actions">${n.file_url?`<a class="btn btn-primary" href="${n.file_url}" target="_blank">Open file</a><button class="btn btn-danger" onclick="deleteAttachment('notes','${id}','file_url','notes-files','${n.file_url}', () => openNoteDetail('${id}'))">Delete file</button>`:`<button class="btn btn-ghost" disabled>No file attached</button>`}</div>
+    ${canManageNotes ? `<div class="detail-actions"><button class="btn btn-danger" onclick="deleteNote('${id}')">Delete this note</button></div>` : ''}
     <hr class="divider">
     <p style="font-weight:700;font-size:13px;margin:0 0 10px;">Was this useful?</p>
     <div class="detail-actions"><button class="btn btn-ghost" onclick="rateNote('${id}',true)">👍 Useful</button><button class="btn btn-ghost" onclick="rateNote('${id}',false)">👎 Not useful</button></div>
   `);
+}
+async function deleteNote(id){
+  const { data: n } = await sb.from('notes').select('file_url').eq('id', id).single();
+  if(n?.file_url){
+    const path = storagePathFromUrl('notes-files', n.file_url);
+    if(path) await sb.storage.from('notes-files').remove([path]);
+  }
+  await sb.from('notes').delete().eq('id', id);
+  closeSheet(); toast("Note deleted"); renderPanels();
 }
 async function rateNote(id, useful){
   await sb.from('note_ratings').upsert({note_id:id, user_id:myId(), useful}, {onConflict:'note_id,user_id'});
