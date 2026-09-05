@@ -264,7 +264,14 @@ button,input,select,textarea{font-family:inherit;}
   <div class="topbar">
     <div class="logo"><span class="dot"></span>Fuadsi Buzz</div>
     <div class="topbar-actions">
-      <button class="role-pill" id="roleSwitcher" onclick="cycleRole()">Student</button>
+      <button class="role-pill" id="onlineIndicator" onclick="openOnlineList()" style="display:flex;align-items:center;gap:6px;">
+        <span id="onlineDot" style="width:8px;height:8px;border-radius:50%;background:#B7C2BA;flex-shrink:0;"></span>
+        <span id="onlineCount">…</span>
+      </button>
+      <button class="role-pill" id="roleSwitcher">Student</button>
+      <button class="icon-btn" onclick="signOut()" title="Sign out">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+      </button>
     </div>
   </div>
 
@@ -357,8 +364,74 @@ async function initSession(){
   document.getElementById('app').style.display = 'block';
   document.getElementById('roleSwitcher').textContent = roleLabel(profile.role);
   await loadFaculties();
+  startPresence();
+  startLiveActivity();
   renderNav();
   renderPanels();
+}
+
+/* ================= PRESENCE (green "online" indicator) ================= */
+let presenceChannel = null;
+let onlineUsers = {};
+function startPresence(){
+  presenceChannel = sb.channel('app-presence', { config: { presence: { key: myId() } } });
+  presenceChannel
+    .on('presence', { event: 'sync' }, () => {
+      onlineUsers = presenceChannel.presenceState();
+      const count = Object.keys(onlineUsers).length;
+      document.getElementById('onlineCount').textContent = count + (count===1?' online':' online');
+      document.getElementById('onlineDot').style.background = count>0 ? '#1FAE5C' : '#B7C2BA';
+    })
+    .subscribe(async (status) => {
+      if(status === 'SUBSCRIBED'){
+        await presenceChannel.track({ name: profile.full_name || 'Student', role: profile.role, online_at: new Date().toISOString() });
+      }
+    });
+}
+function openOnlineList(){
+  const people = Object.values(onlineUsers).flat();
+  openSheet(`
+    <h2 style="margin:0 0 14px;font-size:16px;">Online now</h2>
+    ${people.length ? `<div class="card-list">${people.map(p=>`
+      <div class="card"><div class="card-row"><div class="card-thumb" style="background:#E7F6ED;">🟢</div>
+      <div class="card-body"><p class="card-title">${esc(p.name)}</p><p class="card-snippet">${roleLabel(p.role)}</p></div></div></div>`).join('')}</div>`
+      : '<p style="font-size:12.5px;color:var(--muted);">No one else is online right now.</p>'}
+  `);
+}
+
+/* ================= LIVE ACTIVITY FEED ================= */
+let liveActivity = [];
+const ACTIVITY_TABLES = [
+  {table:'updates', label:'School Updates', icon:'📢'},
+  {table:'sports_posts', label:'Sports', icon:'⚽'},
+  {table:'hot_gist', label:'Hot Gist', icon:'🔥'},
+  {table:'campus_trends', label:'Campus Trends', icon:'📈'},
+  {table:'notes', label:'Notes', icon:'📘'},
+  {table:'marketplace_items', label:'Marketplace', icon:'🛍️'},
+  {table:'hostel_listings', label:'Hostel Allocation', icon:'🏠'},
+  {table:'spotlight_entries', label:'Spotlight', icon:'🌟'},
+  {table:'timetable_class', label:'Timetable', icon:'🗓️'},
+  {table:'timetable_exam', label:'Timetable', icon:'✍️'}
+];
+function startLiveActivity(){
+  ACTIVITY_TABLES.forEach(({table,label,icon})=>{
+    sb.channel('activity-'+table)
+      .on('postgres_changes', {event:'INSERT', schema:'public', table}, payload=>{
+        const row = payload.new;
+        const title = row.title || row.name || row.course_code || 'New entry';
+        liveActivity.unshift({ label, icon, title, at: new Date().toISOString() });
+        liveActivity = liveActivity.slice(0, 50);
+        if(activeTab === 'activity') renderPanels();
+      }).subscribe();
+  });
+}
+function renderActivity(){
+  const list = liveActivity.length ? `<div class="card-list">${liveActivity.map(a=>`
+    <div class="card"><div class="card-row"><div class="card-thumb">${a.icon}</div>
+    <div class="card-body"><p class="card-title">${esc(a.label)}</p><p class="card-snippet">${esc(a.title)}</p>
+    <div class="card-meta"><span>${timeAgo(a.at)}</span></div></div></div></div>`).join('')}</div>`
+    : `<div class="empty"><div class="e-icon">⚡</div><p class="e-title">Nothing yet</p><p>New posts across the app will stream in here live while you have it open.</p></div>`;
+  return `<div class="panel-head"><h1>Live Activity</h1></div><p style="font-size:12px;color:var(--muted);margin:-8px 0 14px;">Updates as they happen — no need to refresh.</p>${list}`;
 }
 function roleLabel(r){
   return {student:"Student",content_admin:"Content Admin",timetable_admin:"Timetable Admin",
@@ -409,8 +482,14 @@ const TABS = [
    emptyMsg:"No hostel listings yet.", admin:"community_moderator", thumb:"🏠", priceLabel:"Price / session"},
   {key:"spotlight", label:"Spotlight", icon:"gist", type:"spotlight", nav:false, title:"Spotlight — Face of the Week"},
   {key:"feedback", label:"Feedback", icon:"notes", type:"feedback", nav:false, title:"Feedback & Ratings"},
+  {key:"admin", label:"Admin", icon:"home", type:"admin", nav:false, title:"Admin Management", thumb:"🛡️"},
+  {key:"activity", label:"Activity", icon:"home", type:"activity", nav:false, title:"Live Activity", thumb:"⚡"},
   {key:"about", label:"About", icon:"home", type:"about", nav:false, title:"About FUADSI"}
 ];
+
+function visibleMoreTabs(){
+  return TABS.filter(t=>!t.nav).filter(t=> t.key !== 'admin' || (profile && profile.role==='super_admin'));
+}
 
 function renderNav(){
   document.getElementById('bottomnav').innerHTML = TABS.filter(t=>t.nav).map(t=>`
@@ -1008,9 +1087,45 @@ async function openFeedbackDetail(id){
 
 /* ================= MORE / ABOUT ================= */
 function renderMore(){
-  const items = TABS.filter(t=>!t.nav);
+  const items = visibleMoreTabs();
   return `<div class="panel-head"><h1>More</h1></div>
   <div class="more-grid">${items.map(t=>`<div class="more-item" onclick="goTab('${t.key}')"><div class="mi-icon">${t.thumb||ICONS[t.icon]}</div><span>${t.label}</span></div>`).join('')}</div>`;
+}
+
+/* ================= ADMIN MANAGEMENT ================= */
+const ROLE_OPTIONS = ['student','content_admin','timetable_admin','community_moderator','super_admin'];
+async function renderAdmin(){
+  if(profile.role !== 'super_admin'){
+    return `<div class="panel-head"><h1>Admin Management</h1></div><div class="empty"><div class="e-icon">🛡️</div><p class="e-title">Super Admin only</p><p>You don't have access to this panel.</p></div>`;
+  }
+  const { data: users, error } = await sb.rpc('admin_list_users');
+  if(error){ return `<div class="panel-head"><h1>Admin Management</h1></div><p style="color:var(--danger);font-size:13px;">${esc(error.message)}</p>`; }
+  const rows = (users||[]).map(u=>`
+    <div class="card">
+      <div class="card-row">
+        <div class="card-thumb">${(u.full_name||u.email||'?')[0].toUpperCase()}</div>
+        <div class="card-body">
+          <p class="card-title">${esc(u.full_name||'(no name)')}</p>
+          <p class="card-snippet">${esc(u.email)}</p>
+          <div class="card-meta"><span class="chip">Joined ${new Date(u.created_at).toLocaleDateString()}</span>${u.last_sign_in_at?`<span class="chip">Last in ${timeAgo(u.last_sign_in_at)}</span>`:''}</div>
+        </div>
+      </div>
+      <div style="margin-top:10px;">
+        <select onchange="changeUserRole('${u.id}', this.value)" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:8px;font-size:12.5px;">
+          ${ROLE_OPTIONS.map(r=>`<option value="${r}" ${r===u.role?'selected':''}>${roleLabel(r)}</option>`).join('')}
+        </select>
+      </div>
+    </div>`).join('');
+  return `
+    <div class="panel-head"><h1>Admin Management</h1></div>
+    <p style="font-size:12.5px;color:var(--muted);margin:-6px 0 14px;">${users.length} account${users.length===1?'':'s'} registered. Change a role below — it takes effect next time they sign in.</p>
+    <div class="card-list">${rows || '<p style="font-size:12.5px;color:var(--muted);">No users yet.</p>'}</div>`;
+}
+async function changeUserRole(userId, newRole){
+  const { error } = await sb.rpc('admin_set_role', { target_user_id: userId, new_role: newRole });
+  if(error){ toast(error.message); return; }
+  toast("Role updated");
+  renderPanels();
 }
 function renderAbout(){
   return `
@@ -1054,6 +1169,8 @@ async function renderPanels(){
   else if(cfg.type==="spotlight") html = await renderSpotlight();
   else if(cfg.type==="feedback") html = await renderFeedback();
   else if(cfg.type==="more") html = renderMore();
+  else if(cfg.type==="admin") html = await renderAdmin();
+  else if(cfg.type==="activity") html = renderActivity();
   else if(cfg.type==="about") html = renderAbout();
   document.getElementById('panels').innerHTML = `<div class="panel active">${html}</div>`;
 }
